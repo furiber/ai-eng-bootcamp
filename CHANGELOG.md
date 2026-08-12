@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Local troubleshooting notes in the README for a stale uvicorn process holding port 8000.
+
+### Fixed
+
+- Inline emoji favicon on the frontend, removing a `favicon.ico` 404 from the browser console.
+
 ## [0.1.0] - 2026-08-13
 
 ### Added

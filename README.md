@@ -23,6 +23,23 @@ uvicorn main:app --reload
 
 Open <http://127.0.0.1:8000/> for the frontend or <http://127.0.0.1:8000/docs> for Swagger UI.
 
+If `/` returns 404 while `/health` still answers, an older server process is holding
+port 8000 and serving stale code. Check what the running server actually exposes, and
+kill it if the paths look wrong:
+
+```bash
+curl -s http://127.0.0.1:8000/openapi.json   # should list /health and /api/ask
+```
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+  Where-Object { $_.CommandLine -like '*uvicorn*' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+```
+
+`--reload` needs `watchfiles` (pulled in by `uvicorn[standard]` in `requirements.txt`).
+Without it uvicorn falls back to a polling reloader that can miss edits entirely.
+
 Example request:
 
 ```bash
