@@ -1,0 +1,4 @@
+# Keep container and shell files LF so they still work after a Windows checkout.
+* text=auto eol=lf
+*.png binary
+*.jpg binary

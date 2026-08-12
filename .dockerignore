@@ -1,0 +1,12 @@
+.git
+.gitignore
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+.env
+.claude
+capstone-answers.md
+test_main.py
+README.md
+CHANGELOG.md

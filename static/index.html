@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ask API</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #14161a;
+        --muted: #5f6672;
+        --line: #d9dde3;
+        --accent: #2f6bff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #14161a;
+          --fg: #e8eaee;
+          --muted: #9aa2ae;
+          --line: #2c313a;
+          --accent: #6f9bff;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 3rem 1.25rem;
+        background: var(--bg);
+        color: var(--fg);
+        font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      }
+      main { max-width: 44rem; margin: 0 auto; }
+      h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+      p.sub { margin: 0 0 2rem; color: var(--muted); }
+      p.sub a { color: var(--accent); }
+      label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: .35rem; }
+      textarea, select, button {
+        font: inherit;
+        border-radius: .5rem;
+        border: 1px solid var(--line);
+        background: transparent;
+        color: inherit;
+        padding: .65rem .75rem;
+      }
+      textarea { width: 100%; min-height: 7rem; resize: vertical; }
+      .row { display: flex; gap: .75rem; align-items: flex-end; margin-top: 1rem; }
+      .row > div { flex: 1; }
+      select { width: 100%; }
+      button {
+        border-color: transparent;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        padding-inline: 1.25rem;
+      }
+      button[disabled] { opacity: .55; cursor: progress; }
+      #answer {
+        margin-top: 2rem;
+        padding: 1rem 1.15rem;
+        border: 1px solid var(--line);
+        border-radius: .5rem;
+        white-space: pre-wrap;
+        min-height: 3rem;
+      }
+      #answer.error { border-color: #d9534f; color: #d9534f; }
+      #meta { margin-top: .5rem; font-size: .8rem; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Ask API</h1>
+      <p class="sub">
+        Frontend for <code>POST /api/ask</code>. Full API reference at
+        <a href="/docs">/docs</a>.
+      </p>
+
+      <form id="form">
+        <label for="question">Question</label>
+        <textarea id="question" required placeholder="Why is the sky blue?"></textarea>
+
+        <div class="row">
+          <div>
+            <label for="model">Model</label>
+            <select id="model">
+              <option value="gpt-4o-mini" selected>gpt-4o-mini</option>
+              <option value="gpt-4o">gpt-4o</option>
+              <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+            </select>
+          </div>
+          <button id="submit" type="submit">Ask</button>
+        </div>
+      </form>
+
+      <div id="answer" aria-live="polite"></div>
+      <div id="meta"></div>
+    </main>
+
+    <script>
+      const form = document.getElementById("form");
+      const button = document.getElementById("submit");
+      const answer = document.getElementById("answer");
+      const meta = document.getElementById("meta");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        button.disabled = true;
+        answer.className = "";
+        answer.textContent = "Thinking…";
+        meta.textContent = "";
+
+        try {
+          const res = await fetch("/api/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              question: document.getElementById("question").value,
+              model: document.getElementById("model").value,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            // FastAPI validation errors put a list of objects in `detail`.
+            const detail = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
+            throw new Error(detail || `Request failed (${res.status})`);
+          }
+          answer.textContent = data.answer;
+          meta.textContent = `answered by ${data.model}`;
+        } catch (err) {
+          answer.className = "error";
+          answer.textContent = err.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

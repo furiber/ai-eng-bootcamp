@@ -1,0 +1,14 @@
+services:
+  - type: web
+    runtime: docker
+    name: ask-api
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      # Prompted for in the Render dashboard on first deploy; never stored here.
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DEFAULT_MODEL
+        value: gpt-4o-mini
