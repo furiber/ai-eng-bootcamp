@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The ask endpoint is served at `/ask` rather than `/api/ask`, matching the originally specified path.
+
 ### Added
 
 - Local troubleshooting notes in the README for a stale uvicorn process holding port 8000.

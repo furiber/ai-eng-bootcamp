@@ -76,7 +76,7 @@
     <main>
       <h1>Ask API</h1>
       <p class="sub">
-        Frontend for <code>POST /api/ask</code>. Full API reference at
+        Frontend for <code>POST /ask</code>. Full API reference at
         <a href="/docs">/docs</a>.
       </p>
 
@@ -115,7 +115,7 @@
         meta.textContent = "";
 
         try {
-          const res = await fetch("/api/ask", {
+          const res = await fetch("/ask", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

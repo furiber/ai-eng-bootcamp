@@ -1,4 +1,4 @@
-"""Self-check for the /api/ask route. Run with `python test_main.py` (or pytest).
+"""Self-check for the /ask route. Run with `python test_main.py` (or pytest).
 
 The OpenAI call is stubbed out, so no API key and no network access are needed.
 """
@@ -33,22 +33,22 @@ def test_health():
 
 
 def test_ask_returns_answer_and_model():
-    res = _client(_ok).post("/api/ask", json={"question": "hi", "model": "gpt-4o"})
+    res = _client(_ok).post("/ask", json={"question": "hi", "model": "gpt-4o"})
     assert res.status_code == 200, res.text
     assert res.json() == {"answer": "answer to: hi", "model": "gpt-4o"}
 
 
 def test_ask_uses_default_model_when_omitted():
-    res = _client(_ok).post("/api/ask", json={"question": "hi"})
+    res = _client(_ok).post("/ask", json={"question": "hi"})
     assert res.json()["model"] == main.DEFAULT_MODEL
 
 
 def test_ask_rejects_empty_question():
-    assert _client(_ok).post("/api/ask", json={"question": ""}).status_code == 422
+    assert _client(_ok).post("/ask", json={"question": ""}).status_code == 422
 
 
 def test_ask_passes_through_upstream_client_errors():
-    res = _client(_api_error).post("/api/ask", json={"question": "hi", "model": "nope"})
+    res = _client(_api_error).post("/ask", json={"question": "hi", "model": "nope"})
     assert res.status_code == 404, res.text
     assert "no such model" in res.json()["detail"]
 

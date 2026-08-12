@@ -1,4 +1,4 @@
-"""FastAPI service exposing a single /api/ask endpoint backed by the OpenAI API.
+"""FastAPI service exposing a single /ask endpoint backed by the OpenAI API.
 
 The static frontend in ./static is served from the same container, so there is
 no CORS configuration and no separate deployment to keep in sync. Interactive
@@ -26,7 +26,7 @@ app = FastAPI(
 )
 
 # api_key is read lazily so the app can boot (and /health can pass) without a
-# key present; a missing key surfaces as a 500 on /api/ask instead of a crash
+# key present; a missing key surfaces as a 500 on /ask instead of a crash
 # at import time, which would make container start-up failures hard to read.
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=60.0, max_retries=2)
 
@@ -47,7 +47,7 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/api/ask", response_model=AskResponse, tags=["ask"])
+@app.post("/ask", response_model=AskResponse, tags=["ask"])
 async def ask(request: AskRequest) -> AskResponse:
     """Send a question to an OpenAI model and return its answer."""
     if not client.api_key:
@@ -69,6 +69,6 @@ async def ask(request: AskRequest) -> AskResponse:
     return AskResponse(answer=response.output_text, model=response.model)
 
 
-# Mounted last so /health, /api/ask, /docs and /openapi.json win over the
+# Mounted last so /health, /ask, /docs and /openapi.json win over the
 # catch-all static route. html=True serves static/index.html at "/".
 app.mount("/", StaticFiles(directory=Path(__file__).parent / "static", html=True), name="static")
