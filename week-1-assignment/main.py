@@ -29,6 +29,34 @@ client = AsyncOpenAI(api_key=API_KEY or "missing-key", timeout=60.0, max_retries
 # Overridable per environment so deployments can swap models without a code change.
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
 
+# USD per 1K tokens, (input, output). List prices as of 2026-08-18 — these are
+# hardcoded figures that OpenAI can change at any time, so treat cost_usd as an
+# estimate and re-check the pricing page rather than trusting it indefinitely.
+MODEL_PRICES_PER_1K: dict[str, tuple[float, float]] = {
+    "gpt-4o": (0.0025, 0.01),
+    "gpt-4o-mini": (0.00015, 0.0006),
+    "o3-mini": (0.0011, 0.0044),
+}
+
+
+def compute_cost_usd(model: str, prompt_tokens: int, completion_tokens: int) -> float | None:
+    """
+    Estimate spend for one call. Returns None for a model with no price on file,
+    because a wrong number is worse than an absent one.
+
+    The API reports a dated model id ("gpt-4o-mini-2024-07-18"), so an exact
+    lookup is tried first and the longest matching prefix second.
+    """
+    prices = MODEL_PRICES_PER_1K.get(model)
+    if prices is None:
+        matches = [name for name in MODEL_PRICES_PER_1K if model.startswith(name)]
+        if not matches:
+            return None
+        prices = MODEL_PRICES_PER_1K[max(matches, key=len)]
+
+    input_per_1k, output_per_1k = prices
+    return (prompt_tokens / 1000 * input_per_1k) + (completion_tokens / 1000 * output_per_1k)
+
 
 class Answer(BaseModel):
     """Structured model output — this is what makes the endpoint a component."""
@@ -48,6 +76,8 @@ class AskResponse(BaseModel):
     model: str
     tokens_used: int
     latency_ms: int
+    # None when the returned model has no price on file — see compute_cost_usd.
+    cost_usd: float | None
 
 
 @app.get("/health", tags=["ops"])
@@ -82,9 +112,17 @@ async def ask(request: AskRequest) -> AskResponse:
     except ValidationError as exc:
         raise HTTPException(status_code=502, detail=f"Schema validation failed: {exc}") from exc
 
+    usage = completion.usage
+    cost_usd = compute_cost_usd(
+        completion.model,
+        usage.prompt_tokens if usage else 0,
+        usage.completion_tokens if usage else 0,
+    )
+
     return AskResponse(
         answer=answer,
         model=completion.model,
-        tokens_used=completion.usage.total_tokens if completion.usage else 0,
+        tokens_used=usage.total_tokens if usage else 0,
         latency_ms=int((time.perf_counter() - start) * 1000),
+        cost_usd=round(cost_usd, 6) if cost_usd is not None else None,
     )

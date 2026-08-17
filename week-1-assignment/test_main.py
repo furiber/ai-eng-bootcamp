@@ -18,7 +18,11 @@ def _fake_completion(parsed, *, refusal=None, total_tokens=42, model="gpt-4o-min
     message = SimpleNamespace(parsed=parsed, refusal=refusal)
     return SimpleNamespace(
         choices=[SimpleNamespace(message=message)],
-        usage=SimpleNamespace(total_tokens=total_tokens),
+        usage=SimpleNamespace(
+            total_tokens=total_tokens,
+            prompt_tokens=total_tokens // 2,
+            completion_tokens=total_tokens - total_tokens // 2,
+        ),
         model=model,
     )
 
@@ -48,7 +52,41 @@ def test_ask_returns_structured_answer():
     assert body["tokens_used"] == 42
     assert body["model"] == "gpt-4o-mini"
     assert isinstance(body["latency_ms"], int)
-    print("PASS  /ask returns a structured answer with usage metadata")
+    # 21 prompt + 21 completion tokens at gpt-4o-mini rates.
+    assert body["cost_usd"] == round(21 / 1000 * 0.00015 + 21 / 1000 * 0.0006, 6)
+    print("PASS  /ask returns a structured answer with usage metadata and cost")
+
+
+def test_cost_uses_dated_model_id():
+    """The API returns "gpt-4o-mini-2024-07-18"; prefix matching must still price it."""
+    _stub(
+        _fake_completion(
+            Answer(answer="42", confidence=0.9, sources_needed=False),
+            model="gpt-4o-mini-2024-07-18",
+        )
+    )
+    body = client.post("/ask", json={"question": "q"}).json()
+    assert body["cost_usd"] is not None and body["cost_usd"] > 0
+    print("PASS  a dated model id is priced via prefix match")
+
+
+def test_unknown_model_costs_null_not_wrong():
+    _stub(
+        _fake_completion(
+            Answer(answer="42", confidence=0.9, sources_needed=False),
+            model="some-future-model",
+        )
+    )
+    body = client.post("/ask", json={"question": "q"}).json()
+    assert body["cost_usd"] is None, body
+    print("PASS  unknown model returns cost_usd null rather than a wrong figure")
+
+
+def test_mini_is_cheaper_than_4o():
+    from main import compute_cost_usd
+
+    assert compute_cost_usd("gpt-4o-mini", 1000, 1000) < compute_cost_usd("gpt-4o", 1000, 1000)
+    print("PASS  gpt-4o-mini prices below gpt-4o for identical usage")
 
 
 def test_refusal_is_502_not_200():
