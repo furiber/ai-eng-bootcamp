@@ -103,6 +103,21 @@ def test_blank_question_rejected_before_spending_tokens():
     print("PASS  empty question rejected by validation (no API call made)")
 
 
+def test_static_page_is_served_at_root():
+    response = client.get("/")
+    assert response.status_code == 200, response.text
+    assert "Week 1 Assignment" in response.text
+    print("PASS  the static page is served at /")
+
+
+def test_static_mount_does_not_shadow_the_api():
+    """The catch-all mount must stay last, or these all become 404s."""
+    assert client.get("/health").status_code == 200
+    assert client.get("/openapi.json").status_code == 200
+    assert client.get("/docs").status_code == 200
+    print("PASS  /health, /docs and /openapi.json still win over the static mount")
+
+
 def test_missing_key_is_500():
     original = main.API_KEY
     main.API_KEY = None

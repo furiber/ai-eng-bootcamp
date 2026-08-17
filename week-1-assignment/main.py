@@ -7,8 +7,10 @@ Then open http://127.0.0.1:8000/docs
 
 import os
 import time
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field, ValidationError
 
@@ -126,3 +128,8 @@ async def ask(request: AskRequest) -> AskResponse:
         latency_ms=int((time.perf_counter() - start) * 1000),
         cost_usd=round(cost_usd, 6) if cost_usd is not None else None,
     )
+
+
+# Mounted last so /health, /ask, /docs and /openapi.json win over this catch-all.
+# html=True serves static/index.html at "/".
+app.mount("/", StaticFiles(directory=Path(__file__).parent / "static", html=True), name="static")

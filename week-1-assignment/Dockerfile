@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # test_main.py is not run in the image, so neither is copied.
 COPY main.py .
 COPY env_setup.py .
+COPY static ./static
 
 # Render sets PORT (default 10000) and requires binding to 0.0.0.0.
 ENV PORT=10000
