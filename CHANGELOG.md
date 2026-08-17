@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A static frontend for `week-1-assignment`, served at `/` from the same container as the API.
+  It posts to `/ask` and shows the answer with confidence, tokens, latency and cost.
 - A `Cost` metric on the Streamlit page, alongside confidence, tokens and latency. An unpriced
   model reads `unpriced` rather than `$0.000000`, which would look like a free call.
 - `cost_usd` on the `week-1-assignment` `/ask` response, estimating spend from input and output
