@@ -58,10 +58,18 @@ if st.button("Ask", type="primary", disabled=not question.strip()):
         answer = body["answer"]
         st.success(answer["answer"])
 
-        left, middle, right = st.columns(3)
-        left.metric("Confidence", f"{answer['confidence']:.0%}")
-        middle.metric("Tokens used", body["tokens_used"])
-        right.metric("Latency", f"{body['latency_ms']} ms")
+        cost = body.get("cost_usd")
+
+        confidence_col, tokens_col, latency_col, cost_col = st.columns(4)
+        confidence_col.metric("Confidence", f"{answer['confidence']:.0%}")
+        tokens_col.metric("Tokens used", body["tokens_used"])
+        latency_col.metric("Latency", f"{body['latency_ms']} ms")
+        # cost_usd is null when the model has no price on file — say so rather
+        # than rendering a misleading $0.000000.
+        cost_col.metric("Cost", f"${cost:.6f}" if cost is not None else "unpriced")
+
+        if cost is None:
+            st.caption(f"No price on file for `{body['model']}`, so cost is not estimated.")
 
         if answer["sources_needed"]:
             st.warning("The model flagged this answer as needing sources.")

@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A `Cost` metric on the Streamlit page, alongside confidence, tokens and latency. An unpriced
+  model reads `unpriced` rather than `$0.000000`, which would look like a free call.
 - `cost_usd` on the `week-1-assignment` `/ask` response, estimating spend from input and output
   token counts. It is `null` for a model with no price on file, rather than reporting a figure
   derived from the wrong rates.
