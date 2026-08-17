@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A second deployable service, `week-1-assignment`: a typed `/ask` endpoint returning structured
+  model output, with its own Dockerfile and a Render blueprint entry. It only rebuilds when files
+  under `week-1-assignment/` change.
+- A Streamlit page for exercising that endpoint locally.
 - Local troubleshooting notes in the README for a stale uvicorn process holding port 8000.
 
 ### Fixed
