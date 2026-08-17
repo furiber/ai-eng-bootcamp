@@ -26,7 +26,8 @@ app = FastAPI(title="Week 1 Assignment — Ask API", version="0.1.0")
 API_KEY = os.getenv("OPENAI_API_KEY")
 client = AsyncOpenAI(api_key=API_KEY or "missing-key", timeout=60.0, max_retries=2)
 
-DEFAULT_MODEL = "gpt-4o-mini"
+# Overridable per environment so deployments can swap models without a code change.
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
 
 
 class Answer(BaseModel):
