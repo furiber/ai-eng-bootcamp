@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `cost_usd` on the `week-1-assignment` `/ask` response, estimating spend from input and output
+  token counts. It is `null` for a model with no price on file, rather than reporting a figure
+  derived from the wrong rates.
 - A second deployable service, `week-1-assignment`: a typed `/ask` endpoint returning structured
   model output, with its own Dockerfile and a Render blueprint entry. It only rebuilds when files
   under `week-1-assignment/` change.
