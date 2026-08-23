@@ -6,6 +6,9 @@ Run: python test_main.py
 import asyncio
 from types import SimpleNamespace
 
+import httpx
+import openai
+
 from fastapi.testclient import TestClient
 
 import main
@@ -34,6 +37,25 @@ def _stub(completion):
         return completion
 
     main.client.chat.completions.parse = fake_parse
+
+
+def _stub_raises(exc):
+    """Replace the network call with a coroutine that raises."""
+
+    async def fake_parse(**_kwargs):
+        raise exc
+
+    main.client.chat.completions.parse = fake_parse
+
+
+def _api_error(cls, message, code=None):
+    """Build a real openai.APIStatusError subclass without touching the network."""
+    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+    response = httpx.Response(cls.status_code, request=request)
+    # The SDK strips the {"error": {...}} envelope before it reaches the exception,
+    # so body is the bare error object. Verified against a real 404 from the API.
+    body = {"message": message, "type": "invalid_request_error", "param": None, "code": code}
+    return cls(f"Error code: {cls.status_code} - {{'error': {body}}}", response=response, body=body)
 
 
 def test_health_needs_no_key():
@@ -128,6 +150,35 @@ def test_missing_key_is_500():
     finally:
         main.API_KEY = original
     print("PASS  missing key reported as a clear 500")
+
+
+def test_invalid_model_is_400_not_502():
+    """The real API answers an unknown model with 404 model_not_found, not 400."""
+    _stub_raises(
+        _api_error(openai.NotFoundError, "The model `nope` does not exist", "model_not_found")
+    )
+    response = client.post("/ask", json={"question": "hi", "model": "nope"})
+    assert response.status_code == 400, response.text
+    detail = response.json()["detail"]
+    assert detail == "The model `nope` does not exist", detail
+    # A 400 body must not quote the upstream 404, nor a stringified Python dict.
+    assert "404" not in detail and "{" not in detail, detail
+    print("PASS  an unknown model name returns 400 with a clean message, not a raw 502")
+
+
+def test_bad_request_is_400():
+    _stub_raises(_api_error(openai.BadRequestError, "Invalid value for 'temperature'"))
+    response = client.post("/ask", json={"question": "hi"})
+    assert response.status_code == 400, response.text
+    print("PASS  an upstream 400 is passed through as 400")
+
+
+def test_upstream_rate_limit_stays_502():
+    """Only caller-fixable errors become 4xx; our quota problem is not the caller's."""
+    _stub_raises(_api_error(openai.RateLimitError, "Rate limit reached"))
+    response = client.post("/ask", json={"question": "hi"})
+    assert response.status_code == 502, response.text
+    print("PASS  an upstream 429 still surfaces as 502")
 
 
 if __name__ == "__main__":
