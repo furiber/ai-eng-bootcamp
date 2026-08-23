@@ -106,7 +106,12 @@ async def ask(request: AskRequest) -> AskResponse:
         # folded into one "your request was bad" 400. Everything else upstream
         # (auth, quota, provider outage) is our problem, not the caller's: 502.
         status = 400 if exc.status_code in (400, 404) else 502
-        raise HTTPException(status_code=status, detail=f"OpenAI error: {exc}") from exc
+        # str(exc) is the SDK's own "Error code: 404 - {...}" text, which would put a
+        # 404 and a stringified Python dict inside a 400 body. Take the provider's
+        # message on its own instead, so the response stays readable JSON. The SDK
+        # has already unwrapped the {"error": {...}} envelope, so body IS the error.
+        message = exc.body.get("message") if isinstance(exc.body, dict) else None
+        raise HTTPException(status_code=status, detail=message or str(exc)) from exc
     except Exception as exc:  # ponytail: one mapping for the rest; split if a caller needs detail
         raise HTTPException(status_code=502, detail=f"OpenAI error: {exc}") from exc
 
