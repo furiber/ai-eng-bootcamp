@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- An unknown model name sent to `week-1-assignment`'s `/ask` now returns a `400` with the
+  upstream message, instead of a bare `502`. OpenAI reports an unknown model as `404
+  model_not_found` rather than `400`, so both upstream codes are treated as a bad request
+  from the caller. Upstream auth, quota and provider failures still return `502`, since
+  those are not the caller's to fix.
+
 ### Changed
 
 - The ask endpoint is served at `/ask` rather than `/api/ask`, matching the originally specified path.

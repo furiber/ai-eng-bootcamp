@@ -11,7 +11,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from openai import AsyncOpenAI
+from openai import APIStatusError, AsyncOpenAI
 from pydantic import BaseModel, Field, ValidationError
 
 from env_setup import load_env
@@ -101,7 +101,13 @@ async def ask(request: AskRequest) -> AskResponse:
             messages=[{"role": "user", "content": request.question}],
             response_format=Answer,
         )
-    except Exception as exc:  # ponytail: one upstream mapping; split if a caller needs detail
+    except APIStatusError as exc:
+        # A bad model name comes back as 404 model_not_found, not 400, so both are
+        # folded into one "your request was bad" 400. Everything else upstream
+        # (auth, quota, provider outage) is our problem, not the caller's: 502.
+        status = 400 if exc.status_code in (400, 404) else 502
+        raise HTTPException(status_code=status, detail=f"OpenAI error: {exc}") from exc
+    except Exception as exc:  # ponytail: one mapping for the rest; split if a caller needs detail
         raise HTTPException(status_code=502, detail=f"OpenAI error: {exc}") from exc
 
     message = completion.choices[0].message
