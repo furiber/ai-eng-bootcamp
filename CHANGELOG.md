@@ -7,20 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- An unknown model name sent to `week-1-assignment`'s `/ask` now returns a `400` with the
-  upstream message, instead of a bare `502`. OpenAI reports an unknown model as `404
-  model_not_found` rather than `400`, so both upstream codes are treated as a bad request
-  from the caller. Upstream auth, quota and provider failures still return `502`, since
-  those are not the caller's to fix.
-
-### Changed
-
-- The ask endpoint is served at `/ask` rather than `/api/ask`, matching the originally specified path.
-
 ### Added
 
+- A README for `week-1-assignment`, covering the response shape, the error-status mapping,
+  local and container runs, the Streamlit page, and the Render blueprint. It records two
+  things that are easy to get wrong: the key comes from the repository root's `.env` rather
+  than one in that folder, and an unknown model is reported by the SDK as `404
+  model_not_found`, not `400`.
 - A static frontend for `week-1-assignment`, served at `/` from the same container as the API.
   It posts to `/ask` and shows the answer with confidence, tokens, latency and cost.
 - A `Cost` metric on the Streamlit page, alongside confidence, tokens and latency. An unpriced
@@ -34,8 +27,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A Streamlit page for exercising that endpoint locally.
 - Local troubleshooting notes in the README for a stale uvicorn process holding port 8000.
 
+### Changed
+
+- The ask endpoint is served at `/ask` rather than `/api/ask`, matching the originally specified path.
+
 ### Fixed
 
+- An unknown model name sent to `week-1-assignment`'s `/ask` now returns a `400` with the
+  upstream message, instead of a bare `502`. OpenAI reports an unknown model as `404
+  model_not_found` rather than `400`, so both upstream codes are treated as a bad request
+  from the caller. Upstream auth, quota and provider failures still return `502`, since
+  those are not the caller's to fix.
 - Inline emoji favicon on the frontend, removing a `favicon.ico` 404 from the browser console.
 
 ## [0.1.0] - 2026-08-13
