@@ -448,18 +448,37 @@ those matches into the prompt — that is the next step.
 
 ## The Streamlit page
 
-An optional local UI over the same endpoint. It needs two terminals, because the
-API and the page are separate processes:
+A local UI over the API, with an Ask tab and an Ingest tab. It holds no
+retrieval logic of its own: it posts JSON and renders the reply, so anything it
+shows is something the service actually returned.
 
 ```bash
-uvicorn main:app --reload          # terminal 1
-streamlit run streamlit_app.py     # terminal 2
+ASK_API_BASE_URL=https://your-service.onrender.com streamlit run streamlit_app.py
 ```
 
-Open <http://localhost:8501>. The sidebar takes the API base URL, so the page can
-be pointed at the deployed service instead of a local one. It shows confidence,
-tokens, latency and cost; an unpriced model reads `unpriced` rather than
-`$0.000000`, which would look like a free call.
+```powershell
+$env:ASK_API_BASE_URL = "https://your-service.onrender.com"
+streamlit run streamlit_app.py
+```
+
+Open <http://localhost:8501>. Without the variable it defaults to
+`http://127.0.0.1:8000`, and the sidebar box overrides either way — so pointing
+it at a local `uvicorn main:app --reload` needs two terminals, one per process.
+
+**No credentials pass through this page.** It never reads a key and never sends
+one; the service holds its own. The only thing configurable is which service to
+talk to.
+
+The Ask tab shows the answer, the cited `document_id`s, confidence, tokens,
+latency and cost, and the full list of retrieved chunk ids underneath. Seeing
+retrieved and cited side by side is the point: retrieval is broad, citation is
+not. A refusal renders as its own state rather than an answer with a warning
+attached, because a refusal is a correct outcome.
+
+The Ingest tab takes a `document_id`, an optional `source` and the text. It
+writes to the same index everything else reads, so a document added here is
+live for the next question — including on a deployed service pointed at the
+same index.
 
 ## Run the checks
 
