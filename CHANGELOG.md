@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- An Ingest tab on the `week-2-assignment` Streamlit page, and a rewritten Ask tab showing
+  the cited document ids, the chunk ids that were retrieved, and a refusal as its own state
+  rather than an answer with a warning attached. The page holds no retrieval logic: it posts
+  to the API and renders the reply, so what it shows is what the service returned. Its base
+  URL comes from `ASK_API_BASE_URL` or the sidebar, and it handles no credentials -- those
+  stay on the service.
 - `/ask` on `week-2-assignment` now answers from retrieved documents rather than from the
   model's own knowledge. It embeds the question, retrieves the nearest chunks (five by
   default, set per request with `top_k`) and answers from those alone, refusing when the
