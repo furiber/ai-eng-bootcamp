@@ -31,3 +31,42 @@ services:
         sync: false
       - key: DEFAULT_MODEL
         value: gpt-4o-mini
+
+  - type: web
+    runtime: docker
+    name: week-2-assignment
+    plan: free
+    region: oregon
+    # Build context and Dockerfile both come from this subdirectory.
+    rootDir: week-2-assignment
+    healthCheckPath: /health
+    # Without this, every commit anywhere in the repo rebuilds this service.
+    buildFilter:
+      paths:
+        - week-2-assignment/**
+    envVars:
+      # Prompted for in the Render dashboard on first deploy; never stored here.
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: DEFAULT_MODEL
+        value: gpt-4o-mini
+      # Not secret, so these are set here rather than prompted for. The
+      # embedding size must match the index's dimension or every upsert fails.
+      - key: EMBEDDING_MODEL
+        value: text-embedding-3-small
+      - key: EMBEDDING_DIMENSIONS
+        value: "1536"
+      - key: PINECONE_INDEX_NAME
+        value: ask-api-docs
+      # Read only when creating the index, not when querying it.
+      - key: PINECONE_CLOUD
+        value: aws
+      - key: PINECONE_REGION
+        value: us-east-1
+      # Characters, not tokens. The overlap must be smaller than the size.
+      - key: CHUNK_SIZE
+        value: "800"
+      - key: CHUNK_OVERLAP
+        value: "100"

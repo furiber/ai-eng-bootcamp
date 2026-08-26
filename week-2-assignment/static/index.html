@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Week 2 Assignment — Ask</title>
+    <!-- Inline emoji favicon: avoids a 404 in the console with no extra file to serve. -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📊</text></svg>"
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #14161a;
+        --muted: #5f6672;
+        --line: #d9dde3;
+        --accent: #2f6bff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #14161a;
+          --fg: #e8eaee;
+          --muted: #9aa2ae;
+          --line: #2c313a;
+          --accent: #6f9bff;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 3rem 1.25rem;
+        background: var(--bg);
+        color: var(--fg);
+        font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      }
+      main { max-width: 44rem; margin: 0 auto; }
+      h1 { font-size: 1.5rem; margin: 0 0 .25rem; }
+      p.sub { margin: 0 0 2rem; color: var(--muted); }
+      p.sub a { color: var(--accent); }
+      label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: .35rem; }
+      textarea, select, button {
+        font: inherit;
+        border-radius: .5rem;
+        border: 1px solid var(--line);
+        background: transparent;
+        color: inherit;
+        padding: .65rem .75rem;
+      }
+      textarea { width: 100%; min-height: 7rem; resize: vertical; }
+      .row { display: flex; gap: .75rem; align-items: flex-end; margin-top: 1rem; }
+      .row > div { flex: 1; }
+      select { width: 100%; }
+      button {
+        border-color: transparent;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        padding-inline: 1.25rem;
+      }
+      button[disabled] { opacity: .55; cursor: progress; }
+      #answer {
+        margin-top: 2rem;
+        padding: 1rem 1.15rem;
+        border: 1px solid var(--line);
+        border-radius: .5rem;
+        white-space: pre-wrap;
+        min-height: 3rem;
+      }
+      #answer.error { border-color: #d9534f; color: #d9534f; }
+      /* Metrics sit on one row on desktop and wrap to two columns on a phone. */
+      #metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+        gap: .75rem;
+        margin-top: 1rem;
+      }
+      #metrics.hidden { display: none; }
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: .5rem;
+        padding: .6rem .75rem;
+      }
+      .metric dt { font-size: .75rem; color: var(--muted); margin: 0 0 .2rem; }
+      .metric dd { margin: 0; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+      #note { margin-top: .75rem; font-size: .8rem; color: var(--muted); }
+      details { margin-top: 1.25rem; }
+      summary { cursor: pointer; color: var(--muted); font-size: .85rem; }
+      pre {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: .5rem;
+        padding: .75rem 1rem;
+        font-size: .8rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Week 2 Assignment — Ask</h1>
+      <p class="sub">
+        Frontend for <code>POST /ask</code>. Returns a structured answer with token
+        and cost figures. Full API reference at <a href="/docs">/docs</a>.
+      </p>
+
+      <form id="form">
+        <label for="question">Question</label>
+        <textarea id="question" required placeholder="What is Retrieval-Augmented Generation?"></textarea>
+
+        <div class="row">
+          <div>
+            <label for="model">Model</label>
+            <select id="model">
+              <option value="gpt-4o-mini" selected>gpt-4o-mini</option>
+              <option value="gpt-4o">gpt-4o</option>
+            </select>
+          </div>
+          <button id="submit" type="submit">Ask</button>
+        </div>
+      </form>
+
+      <div id="answer" aria-live="polite"></div>
+
+      <dl id="metrics" class="hidden">
+        <div class="metric"><dt>Confidence</dt><dd id="m-confidence">—</dd></div>
+        <div class="metric"><dt>Tokens used</dt><dd id="m-tokens">—</dd></div>
+        <div class="metric"><dt>Latency</dt><dd id="m-latency">—</dd></div>
+        <div class="metric"><dt>Cost</dt><dd id="m-cost">—</dd></div>
+      </dl>
+
+      <p id="note"></p>
+
+      <details id="raw-wrap" hidden>
+        <summary>Raw JSON</summary>
+        <pre id="raw"></pre>
+      </details>
+    </main>
+
+    <script>
+      const form = document.getElementById("form");
+      const button = document.getElementById("submit");
+      const answer = document.getElementById("answer");
+      const metrics = document.getElementById("metrics");
+      const note = document.getElementById("note");
+      const rawWrap = document.getElementById("raw-wrap");
+      const raw = document.getElementById("raw");
+
+      const set = (id, value) => (document.getElementById(id).textContent = value);
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        button.disabled = true;
+        answer.className = "";
+        answer.textContent = "Thinking…";
+        metrics.classList.add("hidden");
+        rawWrap.hidden = true;
+        note.textContent = "";
+
+        try {
+          const res = await fetch("/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              question: document.getElementById("question").value,
+              model: document.getElementById("model").value,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            // FastAPI validation errors put a list of objects in `detail`.
+            const detail = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
+            throw new Error(detail || `Request failed (${res.status})`);
+          }
+
+          answer.textContent = data.answer.answer;
+          set("m-confidence", `${Math.round(data.answer.confidence * 100)}%`);
+          set("m-tokens", data.tokens_used);
+          set("m-latency", `${data.latency_ms} ms`);
+          // cost_usd is null for a model with no price on file. Showing $0.000000
+          // would read as a free call rather than an absent estimate.
+          set("m-cost", data.cost_usd === null ? "unpriced" : `$${data.cost_usd.toFixed(6)}`);
+          metrics.classList.remove("hidden");
+
+          const notes = [];
+          if (data.cost_usd === null) notes.push(`No price on file for ${data.model}.`);
+          if (data.answer.sources_needed) notes.push("The model flagged this answer as needing sources.");
+          note.textContent = notes.join(" ");
+
+          raw.textContent = JSON.stringify(data, null, 2);
+          rawWrap.hidden = false;
+        } catch (err) {
+          answer.className = "error";
+          answer.textContent = err.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

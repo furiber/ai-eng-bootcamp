@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `/ask` on `week-2-assignment` now answers from retrieved documents rather than from the
+  model's own knowledge. It embeds the question, retrieves the nearest chunks (five by
+  default, set per request with `top_k`) and answers from those alone, refusing when the
+  context does not support an answer. The response gains `retrieved_chunk_ids`, everything
+  put in front of the model in rank order, and each answer gains `citations`, the
+  `document_id`s the model says it used. `tokens_used` and `cost_usd` keep their Session 1
+  meaning of generation figures; `latency_ms` now covers retrieval as well, since that is
+  what the caller waited for.
+- `GET /debug/retrieve?q=...` on `week-2-assignment`, returning the nearest indexed chunks
+  with their similarity scores, document id, chunk index and source. It calls no language
+  model and generates no answer, so retrieval quality can be judged on its own before
+  generation is wired in. No matches is an empty `200` rather than an error: nothing indexed
+  yet is a real answer, and the one this endpoint exists to surface.
+- `POST /ingest` on `week-2-assignment`: chunk a document, embed each chunk and index it,
+  returning the document id, the number of chunks indexed and a status. Chunks are stored
+  under deterministic ids, so re-sending the same document id overwrites its chunks instead
+  of duplicating them and the endpoint is safe to retry. Re-sending a document that has since
+  got shorter also removes its surplus chunks, which would otherwise linger from the longer
+  previous version and keep matching searches. Empty or whitespace-only text, a
+  blank document id, and text that yields no chunks are each a `400` with a message naming
+  the problem -- a `200` reading zero chunks indexed would look like the document was stored.
+- Chunking via `RecursiveCharacterTextSplitter`, sized by `CHUNK_SIZE` and `CHUNK_OVERLAP`.
+  Both are counted in characters rather than tokens. The splitter is built on first use, not
+  at import: it refuses an overlap that is not smaller than the chunk size, and since both
+  come from the environment, building it at import would let one bad setting stop the app
+  booting and take `/health` down with it. Deferred, it is a `500` naming both variables.
+- Pinecone vector-store support in `week-2-assignment`, in a new `rag.py`: embedding, upsert
+  and similarity search, all configured from environment variables. Ingest and query embed
+  through one function reading one model and dimension setting, because vectors from different
+  models are not comparable and mixing them returns quietly wrong results rather than failing.
+- A `rag.check()` health check, runnable as `python rag.py`, confirming Pinecone is configured,
+  reachable and agreeing with the configured embedding size. It makes no OpenAI call, so it
+  costs nothing, and it reports key lengths rather than key values. A dimension mismatch is
+  reported as a failure rather than a warning: it is accepted silently at config time and
+  otherwise only surfaces later as every upsert being rejected.
+- A third deployable service, `week-2-assignment`, beginning as a copy of `week-1-assignment`:
+  the same typed `/ask` endpoint with structured output, token, latency and cost figures, with
+  its own Dockerfile, static frontend, Streamlit page and Render blueprint entry. It rebuilds
+  only when files under `week-2-assignment/` change. Session 2 builds retrieval on top of it.
 - A README for `week-1-assignment`, covering the response shape, the error-status mapping,
   local and container runs, the Streamlit page, and the Render blueprint. It records two
   things that are easy to get wrong: the key comes from the repository root's `.env` rather

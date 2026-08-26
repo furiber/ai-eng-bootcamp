@@ -1,0 +1,10 @@
+.env
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+.gitignore
+test_main.py
+test_rag.py
+streamlit_app.py
+ingest_docs.py
