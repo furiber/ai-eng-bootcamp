@@ -70,3 +70,37 @@ services:
         value: "800"
       - key: CHUNK_OVERLAP
         value: "100"
+
+  - type: web
+    runtime: docker
+    name: week-3-spanish-tutor
+    plan: free
+    region: oregon
+    # Build context and Dockerfile both come from this subdirectory.
+    rootDir: week-3-assignment
+    # Streamlit's own health endpoint; the app has no /health route.
+    healthCheckPath: /_stcore/health
+    # Without this, every commit anywhere in the repo rebuilds this service.
+    buildFilter:
+      paths:
+        - week-3-assignment/**
+    envVars:
+      # Prompted for in the Render dashboard on first deploy; never stored here.
+      - key: OPENROUTER_API_KEY
+        sync: false
+      # A Supabase personal access token reaches every project on the account.
+      - key: SUPABASE_ACCESS_TOKEN
+        sync: false
+      - key: SUPABASE_PROJECT_REF
+        sync: false
+      # Required: the app refuses to run on Render without it.
+      - key: APP_PASSWORD
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_BASE_URL
+        value: https://us.cloud.langfuse.com
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash
