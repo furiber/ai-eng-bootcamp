@@ -73,9 +73,11 @@ services:
 
   - type: web
     runtime: docker
-    name: week-3-spanish-tutor
+    name: week-3-assignment
     plan: free
-    region: oregon
+    # Singapore, not Oregon: the service already exists there and Render cannot
+    # move a service between regions after it is created.
+    region: singapore
     # Build context and Dockerfile both come from this subdirectory.
     rootDir: week-3-assignment
     # Streamlit's own health endpoint; the app has no /health route.
