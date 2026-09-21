@@ -1,0 +1,12 @@
+# Secrets come from Render's environment, never from a file baked into the image.
+.env
+.venv/
+venv*/
+__pycache__/
+*.pyc
+*.bak-*
+run_*.log
+docs/
+.playwright-mcp/
+week3_notebook.ipynb
+uv.lock

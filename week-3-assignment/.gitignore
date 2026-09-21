@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv*/
+
+
+# Local safety copies and ad-hoc run output; the dated logs worth keeping live in docs/.
+*.bak-*
+run_*.log

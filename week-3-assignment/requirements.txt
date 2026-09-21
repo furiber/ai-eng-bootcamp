@@ -1,0 +1,11 @@
+# Pinned to the versions the agents were tested with on 2026-09-14.
+google-adk==2.8.0
+google-genai==2.21.0
+# ADK 2.x targets the mcp 1.x module layout; mcp 2.x breaks McpToolset at import time.
+mcp==1.30.0
+# Needed for the OpenRouter model path (agent_core._build_model).
+litellm==1.100.0
+streamlit==1.63.0
+langfuse==4.15.1
+openinference-instrumentation-google-adk==0.1.24
+python-dotenv==1.2.3

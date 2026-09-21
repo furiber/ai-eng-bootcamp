@@ -1,0 +1,18 @@
+[project]
+name = "adk-multi-agent-systems"
+version = "0.1.0"
+description = "Multi-agent AI systems with Google ADK — routing, MCP, and A2A demos"
+requires-python = ">=3.12"
+
+dependencies = [
+    "google-adk>=1.0.0",
+    "google-genai>=1.0.0",
+    # ADK 2.x targets the mcp 1.x module layout; mcp 2.x moved mcp.shared.session
+    # and breaks McpToolset at import time.
+    "mcp>=1.0.0,<2",
+    "python-dotenv>=1.0.0",
+    "a2a-sdk>=0.2.0",
+    "uvicorn>=0.30.0",
+    "streamlit>=1.35.0",
+]
+
