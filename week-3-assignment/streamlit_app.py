@@ -42,7 +42,7 @@ import capstone_router
 
 # redact() strips credentials from anything shown in the browser. Importing agent_core does
 # not spawn the MCP subprocess -- that happens in supabase_toolset(), called per run.
-from agent_core import USE_OPENROUTER, redact
+from agent_core import MAX_TOOL_FAILURES, USE_OPENROUTER, redact, tool_failed
 
 MAX_STEPS = capstone_router.MAX_STEPS
 
@@ -62,6 +62,7 @@ def run_agent_sync(agent, message, timeout=180, max_steps=MAX_STEPS):
         session = await service.create_session(app_name="capstone_ui", user_id="user1")
         content = types.Content(role="user", parts=[types.Part(text=message)])
         trace, final = [], "(no response)"
+        failures: dict[str, int] = {}
         async for event in runner.run_async(
             user_id="user1",
             session_id=session.id,
@@ -81,6 +82,21 @@ def run_agent_sync(agent, message, timeout=180, max_steps=MAX_STEPS):
                 elif fr:
                     result = redact(str(fr.response))[:800] if fr.response else ""
                     trace.append({"author": author, "type": "tool_response", "tool": fr.name, "result": result})
+                    # A tool that keeps erroring will not recover inside this run, and every
+                    # retry costs one of the max_steps calls. Stop while the trace is short
+                    # enough to read instead of burning the budget elsewhere.
+                    if tool_failed(fr.response):
+                        failures[fr.name] = failures.get(fr.name, 0) + 1
+                        if failures[fr.name] >= MAX_TOOL_FAILURES:
+                            langfuse.flush()
+                            return (
+                                f"**Stopped early.** `{fr.name}` failed "
+                                f"{failures[fr.name]} times, so the run was abandoned "
+                                f"before it could finish.\n\nLast error:\n\n```\n"
+                                f"{result[:300]}\n```"
+                            ), trace
+                    else:
+                        failures.pop(fr.name, None)
                 elif text:
                     trace.append({"author": author, "type": "text", "text": redact(text)})
                     if event.is_final_response():

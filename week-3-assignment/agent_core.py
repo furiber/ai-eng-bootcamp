@@ -70,6 +70,31 @@ USER_ID = "user1"
 # burning tokens forever. ADK's own default is 500, and 500 is also its maximum.
 MAX_STEPS = 20
 
+# A tool that has failed outright six times in a row is broken, not unlucky, and it will not start
+# working later in the same run. Without this the agent keeps going on whatever tools still
+# answer and spends the whole MAX_STEPS budget producing work it can never save -- a dead
+# Supabase turns a run into sixteen dictionary lookups and no rows written. Counted per tool
+# name, so one broken tool cannot be masked by another that is fine; a success resets the
+# count. Six leaves room for a slow first connection without letting a dead tool eat the
+# budget.
+MAX_TOOL_FAILURES = int(os.getenv("MAX_TOOL_FAILURES", "6"))
+
+
+def tool_failed(response) -> bool:
+    """True when a tool reported an outright error rather than a result.
+
+    MCP marks a failed call with isError; that covers execute_sql timeouts and the like.
+    Deliberately NOT counted: lookup_spanish_word returning found=false, which is a real
+    answer ("no Spanish entry") the agent is told to handle by picking another word.
+    """
+    if isinstance(response, dict):
+        if response.get("isError"):
+            return True
+        return False
+    # Needle is lowercase because the haystack is: ADK hands this back as a dict on some
+    # paths and as its repr on others, so "'isError': True" and '"isError": true' both occur.
+    return '"iserror": true' in (text := str(response).lower()) or "'iserror': true" in text
+
 
 # --- Secret guard ---
 # The assignment forbids returning API keys or env contents. Each agent's instruction asks
@@ -343,6 +368,7 @@ async def run(agent: Agent, query: str, app_name: str = "week3", max_steps: int 
     final = "(no response)"
     acts: list[str] = []
     step = 0
+    failures: dict[str, int] = {}
 
     async for event in runner.run_async(
         user_id=USER_ID,
@@ -364,6 +390,17 @@ async def run(agent: Agent, query: str, app_name: str = "week3", max_steps: int 
             if kind == "FINAL":
                 final = text.strip()
             log(kind, step, text)
+
+            if fr := part.function_response:
+                if tool_failed(fr.response):
+                    failures[fr.name] = failures.get(fr.name, 0) + 1
+                    if failures[fr.name] >= MAX_TOOL_FAILURES:
+                        return (
+                            f"Stopped: {fr.name} failed {failures[fr.name]} times. "
+                            f"Last error: {redact(str(fr.response))[:300]}"
+                        ), acts
+                else:
+                    failures.pop(fr.name, None)
 
     return final, acts
 
@@ -406,6 +443,15 @@ def selfcheck() -> None:
     assert classify(types.Part(text="checking history"), False) == ("THINK", "checking history")
     assert classify(types.Part(text="done"), True) == ("FINAL", "done")
     assert classify(types.Part(), False) == (None, None)
+
+    # tool_failed() counts hard tool errors and nothing else. An MCP isError response is a
+    # failure; a Wiktionary miss is an answer the agent is meant to work around, and
+    # counting it would abandon runs that are going fine.
+    assert tool_failed({"isError": True, "content": [{"text": "connection timeout"}]})
+    assert tool_failed('{"content": [], "isError": true}')
+    assert not tool_failed({"rows": 1})
+    assert not tool_failed({"word": "lapiz", "found": False, "error": "no Spanish entry"})
+    assert not tool_failed("")
 
     # redact() catches credential shapes even when the env var is unset.
     assert redact("key=AIzaSyB3xxxxxxxxxxxxxxxxxxxxxxxx done") == "key=[REDACTED] done"
