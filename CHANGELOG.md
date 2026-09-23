@@ -13,11 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   planner retried the same query three times, then carried on without it -- spending its
   entire twenty-call budget on sixteen dictionary lookups for a plan it had no way to save,
   and ending in a raw `LlmCallsLimitExceededError` after five and a half minutes. A tool
-  that fails outright three times now ends the run instead, and the page says which tool
-  failed and what the last error was rather than showing a spinner that never resolves. The
-  same run now costs four LLM calls instead of twenty and stops in about a minute. A
+  that fails outright six times in a row now ends the run instead, and the page says which tool
+  failed and what the last error was rather than showing a spinner that never resolves. Measured
+  with a limit of three, the same run cost four LLM calls instead of twenty and stopped in
+  about a minute. A
   Wiktionary "no such word" is an answer the agent is meant to work around, so it does not
-  count as a failure; the limit is `MAX_TOOL_FAILURES`, default 3.
+  count as a failure; the limit is `MAX_TOOL_FAILURES`, default 6.
 
 ### Added
 

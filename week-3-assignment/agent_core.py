@@ -70,12 +70,14 @@ USER_ID = "user1"
 # burning tokens forever. ADK's own default is 500, and 500 is also its maximum.
 MAX_STEPS = 20
 
-# A tool that has failed outright three times is broken, not unlucky, and it will not start
+# A tool that has failed outright six times in a row is broken, not unlucky, and it will not start
 # working later in the same run. Without this the agent keeps going on whatever tools still
 # answer and spends the whole MAX_STEPS budget producing work it can never save -- a dead
 # Supabase turns a run into sixteen dictionary lookups and no rows written. Counted per tool
-# name, so one broken tool cannot be masked by another that is fine.
-MAX_TOOL_FAILURES = int(os.getenv("MAX_TOOL_FAILURES", "3"))
+# name, so one broken tool cannot be masked by another that is fine; a success resets the
+# count. Six leaves room for a slow first connection without letting a dead tool eat the
+# budget.
+MAX_TOOL_FAILURES = int(os.getenv("MAX_TOOL_FAILURES", "6"))
 
 
 def tool_failed(response) -> bool:
